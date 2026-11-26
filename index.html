@@ -133,7 +133,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .link { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; z-index: 2; }
 .link path {
   fill: none; stroke: var(--accent); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; opacity: .75;
-  stroke-dasharray: 1; stroke-dashoffset: 1; animation: linkDraw .22s ease-out forwards, linkFade .35s ease-in .3s forwards;
+  stroke-dasharray: 1; stroke-dashoffset: 1; animation: linkDraw .1s ease-out forwards, linkFade .12s ease-in .11s forwards;
 }
 @keyframes linkDraw { to { stroke-dashoffset: 0; } }
 @keyframes linkFade { to { opacity: 0; } }
@@ -570,7 +570,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
     const path = document.createElementNS(ns, "path");
     path.setAttribute("d", d); path.setAttribute("pathLength", "1");
     svg.appendChild(path); wrap.appendChild(svg);
-    setTimeout(() => svg.remove(), 700);
+    setTimeout(() => svg.remove(), 250);
   }
   const cellEl = (k) => document.querySelector(`.cell[data-i="${k}"]`);
   function flash(idx, cls) {
