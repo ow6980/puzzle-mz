@@ -124,6 +124,11 @@ header { display: flex; align-items: center; justify-content: space-between; gap
   background: var(--mark); transform: rotate(-3deg); opacity: .95;
 }
 .cell.sel { color: var(--mark-ink); }
+.cell.hint::before {
+  content: ""; position: absolute; inset: 14% 8%; border-radius: 4px 9px 5px 8px;
+  background: var(--accent); opacity: .28; transform: rotate(-3deg); animation: hintPulse 1s ease-in-out infinite;
+}
+@keyframes hintPulse { 50% { opacity: .12; } }
 .cell > i { position: relative; font-style: normal; }
 .cell.pop { animation: pop .32s ease-out; }
 .cell.bad { animation: shake .3s; color: var(--bad); }
@@ -200,7 +205,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 <div class="app" id="app">
   <header>
     <div class="brand"><h1>열맞춤 <b>10</b></h1><span class="chip" id="lvl">중간 · 1단계</span></div>
-    <div class="tools"><button class="icon-btn" id="themeBtn" aria-label="다크 모드"></button><button class="icon-btn" id="soundBtn" aria-label="효과음 끄기"></button></div>
+    <div class="tools"><button class="icon-btn" id="helpBtn" aria-label="도움말"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.2-2.5 3.9"/><circle cx="12" cy="17.3" r=".6" fill="currentColor"/></svg></button><button class="icon-btn" id="themeBtn" aria-label="다크 모드"></button><button class="icon-btn" id="soundBtn" aria-label="효과음 끄기"></button></div>
   </header>
   <div class="stats">
     <div class="stat"><span>점수</span><strong id="score">0</strong></div>
@@ -215,8 +220,8 @@ header { display: flex; align-items: center; justify-content: space-between; gap
     <button class="act primary" id="addBtn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>열 추가<span class="badge" id="addN">5</span>
     </button>
-    <button class="act" id="helpBtn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.2-2.5 3.9"/><circle cx="12" cy="17.3" r=".6" fill="currentColor"/></svg>도움말
+    <button class="act" id="hintBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>힌트<span class="badge" id="hintN">3</span>
     </button>
   </nav>
 </div>
@@ -240,6 +245,8 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 
   let S = null;          // game state
   let sel = null;
+  let hintPair = null;
+  const HINTS = 3, HINT_COST = 10;
   let busy = false;
   let muted = false;
   let bests = {};
@@ -323,14 +330,15 @@ header { display: flex; align-items: center; justify-content: space-between; gap
     return cands[Math.round(D.pick * (cands.length - 1))].d;
   }
   function newGame(diff) {
-    S = { diff, stage: 1, score: 0, adds: DIFFS[diff].adds, cells: makeBoard(diff, 1).map((v) => ({ v, g: 0 })) };
+    hintPair = null;
+    S = { diff, stage: 1, score: 0, hints: HINTS, adds: DIFFS[diff].adds, cells: makeBoard(diff, 1).map((v) => ({ v, g: 0 })) };
     sel = null; closeModal(); save(); render(); $("boardWrap").scrollTop = 0;
   }
   function nextStage() {
     S.stage += 1;
     S.cells = makeBoard(S.diff, S.stage).map((v) => ({ v, g: 0 }));
     S.adds = DIFFS[S.diff].adds;
-    sel = null; closeModal(); save(); render(); $("boardWrap").scrollTop = 0;
+    sel = null; hintPair = null; closeModal(); save(); render(); $("boardWrap").scrollTop = 0;
   }
 
   // ---------- rules ----------
@@ -379,11 +387,12 @@ header { display: flex; align-items: center; justify-content: space-between; gap
     if (busy) return;
     const c = S.cells[i];
     if (!c || c.g) return;
+    hintPair = null;
     if (sel === null) { sel = i; sfx.select(); render(); return; }
     if (sel === i) { sel = null; sfx.deselect(); render(); return; }
     if (canMatch(S.cells, sel, i)) { doMatch(sel, i); return; }
     const prev = sel;
-    sel = i; render();
+    sel = null; render();
     flash([prev, i], "bad");
     sfx.wrong(); vibrate(35);
   }
@@ -440,7 +449,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
     if (!rest.length) return;
     const from = S.cells.length;
     S.cells.push(...rest);
-    S.adds -= 1; sel = null;
+    S.adds -= 1; sel = null; hintPair = null;
     sfx.add();
     save(); render();
     for (let k = from; k < S.cells.length; k++) cellEl(k)?.classList.add("pop");
@@ -448,6 +457,20 @@ header { display: flex; align-items: center; justify-content: space-between; gap
     requestAnimationFrame(() => { const el = cellEl(from); if (el) wrap.scrollTop = Math.max(0, el.offsetTop - wrap.clientHeight / 2); });
     toast(`숫자 ${rest.length}개 추가`);
     checkStuck();
+  }
+
+  function hint() {
+    if (busy || S.hints <= 0) return;
+    const moves = allMoves(S.cells);
+    if (!moves.length) { toast(S.adds > 0 ? "짝이 없어요. 열 추가를 눌러보세요" : "짝이 없어요"); return; }
+    S.hints -= 1;
+    S.score = Math.max(0, S.score - HINT_COST);
+    hintPair = moves[Math.floor(Math.random() * moves.length)];
+    sel = null;
+    sfx.select(); toast(`힌트 사용 −${HINT_COST}점 · 남은 힌트 ${S.hints}`);
+    save(); render();
+    const el = cellEl(hintPair[0]);
+    if (el) { const wrap = $("boardWrap"); wrap.scrollTop = Math.max(0, el.offsetTop - wrap.clientHeight / 3); }
   }
 
   function checkStuck() {
@@ -477,6 +500,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
       let cls = "cell";
       if (c.g) cls += " gone";
       if (k === sel) cls += " sel";
+      if (hintPair && (hintPair[0] === k || hintPair[1] === k)) cls += " hint";
       html += `<button class="${cls}" data-i="${k}" ${c.g ? 'tabindex="-1" aria-label="지운 칸"' : `aria-label="${c.v}"`}><i>${c.v}</i></button>`;
     }
     $("board").innerHTML = html;
@@ -485,6 +509,8 @@ header { display: flex; align-items: center; justify-content: space-between; gap
     $("left").textContent = remaining();
     $("lvl").textContent = `${DIFFS[S.diff].name} · ${S.stage}단계`;
     $("addN").textContent = S.adds;
+    $("hintN").textContent = S.hints;
+    $("hintBtn").disabled = S.hints <= 0;
     $("addBtn").disabled = S.adds <= 0;
     $("addBtn").classList.toggle("stuck", S.adds > 0 && n > 0 && !busy && allMoves(S.cells).length === 0);
   }
@@ -547,7 +573,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
       </ul>
       <p>예: 아래 1과 9는 사이 칸이 지워져서 짝이 돼요.</p>
       <div class="demo"><span class="m"><i>1</i></span><span class="g">4</span><span class="g">6</span><span class="m"><i>9</i></span><span>2</span></div>
-      <p>점수: 바로 옆 짝 1점, 떨어진 짝 4점, 줄 삭제 10점, 단계 클리어 보너스.</p>
+      <p>점수: 바로 옆 짝 1점, 떨어진 짝 4점, 줄 삭제 10점, 단계 클리어 보너스. 힌트는 한 게임에 ${HINTS}번, 쓸 때마다 ${HINT_COST}점 깎여요.</p>
       <div class="btns"><button class="btn primary" data-act="close">알겠어요</button></div>`);
   }
   $("modalRoot").addEventListener("click", (e) => {
@@ -569,6 +595,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
   $("addBtn").addEventListener("click", addNumbers);
   $("newBtn").addEventListener("click", () => diffMenu(false));
   $("helpBtn").addEventListener("click", helpModal);
+  $("hintBtn").addEventListener("click", hint);
   $("soundBtn").addEventListener("click", () => {
     muted = !muted; store.set(KEY + "-muted", muted); renderSound(); if (!muted) sfx.select();
   });
@@ -587,6 +614,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
     const saved = (data && data.S) || store.get(KEY);
     if (saved && Array.isArray(saved.cells) && DIFFS[saved.diff]) {
       S = saved;
+      if (typeof S.hints !== "number") S.hints = HINTS;
       render();
       if (!S.cells.length) nextStage();
     } else {
