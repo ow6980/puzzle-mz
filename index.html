@@ -292,7 +292,8 @@ header { display: flex; align-items: center; justify-content: space-between; gap
     o.start(t); o.stop(t + dur + 0.02);
   }
   const sfx = {
-    select: () => tone(740, { dur: 0.05, vol: 0.04 }),
+    select: () => { tone(1050, { dur: 0.07, type: "triangle", vol: 0.1, to: 900 }); tone(2100, { dur: 0.025, vol: 0.025 }); },
+    deselect: () => tone(700, { dur: 0.06, type: "triangle", vol: 0.06, to: 560 }),
     match:  () => { tone(880, { dur: 0.08, type: "triangle", vol: 0.07 }); tone(1320, { at: 0.06, dur: 0.12, type: "triangle", vol: 0.06 }); },
     wrong:  () => tone(260, { dur: 0.09, vol: 0.03, to: 200 }),
     row:    () => [784, 988, 1175].forEach((f, k) => tone(f, { at: k * 0.06, dur: 0.12, type: "triangle", vol: 0.06 })),
@@ -374,7 +375,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
     const c = S.cells[i];
     if (!c || c.g) return;
     if (sel === null) { sel = i; sfx.select(); render(); return; }
-    if (sel === i) { sel = null; render(); return; }
+    if (sel === i) { sel = null; sfx.deselect(); render(); return; }
     if (canMatch(S.cells, sel, i)) { doMatch(sel, i); return; }
     const prev = sel;
     sel = i; render();
