@@ -206,7 +206,9 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .demo span.g { color: var(--faint); font-size: 11px; font-weight: 400; }
 .demo span.m::before { content: ""; position: absolute; inset: 15% 6%; background: var(--mark); border-radius: 3px; transform: rotate(-3deg); }
 .demo span.m i { position: relative; color: var(--mark-ink); font-style: normal; }
-@media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
+.cell.appear > i { display: block; opacity: 0; animation: appear .2s ease-out forwards; animation-delay: var(--d, 0s); }
+@keyframes appear { from { opacity: 0; transform: translateY(8px) scale(.7); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } .cell.appear > i { opacity: 1; } }
 </style>
 
 <div class="app" id="app">
@@ -311,6 +313,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
     o.start(t); o.stop(t + dur + 0.02);
   }
   const sfx = {
+    tick:   (at) => tone(1400, { at, dur: 0.03, vol: 0.025 }),
     select: () => { tone(1050, { dur: 0.07, type: "triangle", vol: 0.1, to: 900 }); tone(2100, { dur: 0.025, vol: 0.025 }); },
     deselect: () => tone(700, { dur: 0.06, type: "triangle", vol: 0.06, to: 560 }),
     match:  () => { tone(880, { dur: 0.08, type: "triangle", vol: 0.07 }); tone(1320, { at: 0.06, dur: 0.12, type: "triangle", vol: 0.06 }); },
@@ -461,9 +464,16 @@ header { display: flex; align-items: center; justify-content: space-between; gap
     const from = S.cells.length;
     S.cells.push(...rest);
     S.adds -= 1; sel = null; hintPair = null;
-    sfx.add();
     save(); render();
-    for (let k = from; k < S.cells.length; k++) cellEl(k)?.classList.add("pop");
+    // cascade: new numbers appear one by one right after the last number
+    const count = S.cells.length - from;
+    const step = Math.min(0.035, 0.9 / count);
+    for (let k = from; k < S.cells.length; k++) {
+      const el = cellEl(k); if (!el) continue;
+      el.style.setProperty("--d", `${((k - from) * step).toFixed(3)}s`);
+      el.classList.add("appear");
+      sfx.tick((k - from) * step);
+    }
     const wrap = $("boardWrap");
     requestAnimationFrame(() => { const el = cellEl(from); if (el) wrap.scrollTop = Math.max(0, el.offsetTop - wrap.clientHeight / 2); });
     toast(`숫자 ${rest.length}개 추가`);
