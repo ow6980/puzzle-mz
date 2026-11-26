@@ -1,0 +1,17 @@
+{
+  "name": "열맞춤 10",
+  "short_name": "열맞춤",
+  "description": "같은 숫자나 합이 10인 짝을 지우는 숫자 퍼즐. 광고 없음.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef3f7",
+  "theme_color": "#eef3f7",
+  "lang": "ko",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
