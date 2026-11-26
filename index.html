@@ -147,8 +147,13 @@ header { display: flex; align-items: center; justify-content: space-between; gap
   border-radius: 10px; background: var(--ink); color: var(--paper); font-family: var(--f-num); font-size: 11px; font-weight: 500;
   display: grid; place-items: center;
 }
-.act.nudge { animation: nudge .9s ease-in-out 2; }
-@keyframes nudge { 30% { transform: translateY(-5px); } 60% { transform: translateY(0); } }
+.act.stuck { animation: nudge 1.6s ease-in-out infinite; }
+.act.stuck::after {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 0 0 var(--accent); animation: ring 1.6s ease-out infinite;
+}
+@keyframes nudge { 0%, 40%, 100% { transform: translateY(0); } 15% { transform: translateY(-6px) scale(1.03); } 28% { transform: translateY(0); } 34% { transform: translateY(-2px); } }
+@keyframes ring { 0% { box-shadow: 0 0 0 0 var(--accent); opacity: .55; } 70%, 100% { box-shadow: 0 0 0 10px var(--accent); opacity: 0; } }
 
 .toast {
   position: fixed; left: 50%; bottom: calc(110px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%) translateY(10px);
@@ -447,7 +452,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 
   function checkStuck() {
     if (allMoves(S.cells).length) return;
-    if (S.adds > 0) { nudge(); return; }
+    if (S.adds > 0) return;
     updateBest(); save();
     setTimeout(sfx.over, 150);
     showModal(`
@@ -481,6 +486,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
     $("lvl").textContent = `${DIFFS[S.diff].name} · ${S.stage}단계`;
     $("addN").textContent = S.adds;
     $("addBtn").disabled = S.adds <= 0;
+    $("addBtn").classList.toggle("stuck", S.adds > 0 && n > 0 && !busy && allMoves(S.cells).length === 0);
   }
   function renderSound() {
     $("soundBtn").setAttribute("aria-label", muted ? "효과음 켜기" : "효과음 끄기");
@@ -505,7 +511,6 @@ header { display: flex; align-items: center; justify-content: space-between; gap
   function flash(idx, cls) {
     idx.forEach((k) => { const el = cellEl(k); if (el) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); } });
   }
-  function nudge() { const b = $("addBtn"); b.classList.remove("nudge"); void b.offsetWidth; b.classList.add("nudge"); }
   let toastT = 0;
   function toast(msg) {
     const t = $("toast"); t.textContent = msg; t.classList.add("show");
